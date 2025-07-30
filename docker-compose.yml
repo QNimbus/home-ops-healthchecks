@@ -1,0 +1,62 @@
+services:
+  tailscale:
+    image: tailscale/tailscale:v1.84@sha256:f97ea471667bd94023f76e228c5be0b95564cdba2f9501cb084eeef139d8b65e
+    hostname: healthchecks
+    restart: unless-stopped
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}?ephemeral=false
+      - TS_HOSTNAME=healthchecks
+      - TS_EXTRA_ARGS=--advertise-tags=tag:healthchecks
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve-config.json
+    volumes:
+      - ./config:/config:ro
+      - tailscale-data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    networks:
+      - tailscale_net
+
+  postgres:
+    image: postgres:17.5@sha256:4d89c904835259bc58876520e56267ca07a4ebd6a027f7814bbbf91b50d685be
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - tailscale_net
+
+  healthchecks:
+    image: healthchecks/healthchecks:v3.10@sha256:1b1dccd945c9cfe102947927065bbf26d100d9852830169c33de3ede82ee8e4b
+    restart: unless-stopped
+    network_mode: service:tailscale
+    env_file: .env
+    command: python manage.py runserver 127.0.0.1:8000
+    depends_on:
+      - tailscale
+      - postgres
+    volumes:
+      - hc-media:/data
+
+  sendalerts:
+    image: healthchecks/healthchecks:v3.10@sha256:1b1dccd945c9cfe102947927065bbf26d100d9852830169c33de3ede82ee8e4b
+    restart: unless-stopped
+    network_mode: service:tailscale
+    env_file: .env
+    command: python manage.py sendalerts
+    depends_on:
+      - tailscale
+      - postgres
+
+volumes:
+  hc-media:
+  postgres-data:
+  tailscale-data:
+
+networks:
+  tailscale_net:
