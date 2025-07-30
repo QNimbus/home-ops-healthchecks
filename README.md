@@ -9,6 +9,7 @@ The setup includes:
 - **PostgreSQL**: Database backend for persistent data storage
 - **Tailscale**: Secure VPN access to the application
 - **Sendalerts**: Background service for sending notifications
+- **Restic**: Automated backups of volumes to S3-compatible storage
 
 The application is accessible via Tailscale's secure network, eliminating the need for port forwarding or exposing services to the public internet.
 
@@ -238,6 +239,21 @@ docker compose up -d
 ```
 
 ## Backup and Maintenance
+### Automated Volume Backups with Restic
+This project includes a Restic service that automatically backs up the persistent volumes (`postgres-data`, `hc-media`, and `tailscale-data`) to an S3-compatible storage. On startup, Restic attempts to restore the latest snapshot if it exists.
+
+Configure the following variables in your `.env` file:
+
+```
+RESTIC_REPOSITORY=s3:https://s3.example.com/bucket
+RESTIC_PASSWORD=yourpassword
+AWS_ACCESS_KEY_ID=yourkey
+AWS_SECRET_ACCESS_KEY=yoursecret
+RESTIC_BACKUP_INTERVAL=86400
+```
+
+Backups run at the interval specified by `RESTIC_BACKUP_INTERVAL` (seconds). Adjust retention logic in `config/restic/backup.sh` as needed.
+
 
 ### Database Backup
 ```bash

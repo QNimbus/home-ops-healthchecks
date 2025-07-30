@@ -16,6 +16,9 @@ services:
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
+    depends_on:
+      restic-restore:
+        condition: service_completed_successfully
     networks:
       - tailscale_net
 
@@ -28,6 +31,9 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    depends_on:
+      restic-restore:
+        condition: service_completed_successfully
     networks:
       - tailscale_net
 
@@ -52,6 +58,44 @@ services:
     depends_on:
       - tailscale
       - postgres
+
+  restic-restore:
+    image: restic/restic:latest
+    entrypoint: /scripts/restore.sh
+    environment:
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    volumes:
+      - ./config/restic:/scripts:ro
+      - hc-media:/data/hc-media
+      - postgres-data:/data/postgres
+      - tailscale-data:/data/tailscale
+    restart: "no"
+
+  restic-backup:
+    image: restic/restic:latest
+    entrypoint: /scripts/backup.sh
+    environment:
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      RESTIC_BACKUP_INTERVAL: ${RESTIC_BACKUP_INTERVAL}
+    volumes:
+      - ./config/restic:/scripts:ro
+      - hc-media:/data/hc-media
+      - postgres-data:/data/postgres
+      - tailscale-data:/data/tailscale
+    depends_on:
+      restic-restore:
+        condition: service_completed_successfully
+      tailscale:
+        condition: service_started
+      postgres:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   hc-media:
