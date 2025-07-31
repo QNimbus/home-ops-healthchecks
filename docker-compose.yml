@@ -1,11 +1,11 @@
 services:
   tailscale:
     image: tailscale/tailscale:v1.84@sha256:f97ea471667bd94023f76e228c5be0b95564cdba2f9501cb084eeef139d8b65e
-    hostname: healthchecks
+    hostname: health
     restart: unless-stopped
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY}?ephemeral=false
-      - TS_HOSTNAME=healthchecks
+      - TS_HOSTNAME=health
       - TS_EXTRA_ARGS=--advertise-tags=tag:healthchecks
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_SERVE_CONFIG=/config/serve-config.json

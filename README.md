@@ -226,6 +226,66 @@ Once everything is set up:
 
 **Note**: The application uses Tailscale Serve to provide HTTPS access. The configuration in `config/serve-config.json` automatically sets up HTTPS termination and proxies requests to the Healthchecks application running on port 8000.
 
+### Optional: Public Internet Access with Tailscale Funnel
+
+By default, this setup only allows access from devices connected to your Tailscale network. If you want to expose your Healthchecks instance to the public internet, you can enable Tailscale Funnel:
+
+**1. Update the serve configuration:**
+
+Edit `config/serve-config.json` and change the `AllowFunnel` setting from `false` to `true`:
+
+```json
+{
+  "TCP": {
+    "443": { "HTTPS": true }
+  },
+  "Web": {
+    "${TS_CERT_DOMAIN}:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8000"
+        }
+      }
+    }
+  },
+  "AllowFunnel": {
+    "${TS_CERT_DOMAIN}:443": true
+  }
+}
+```
+
+**2. Configure Tailscale ACL:**
+
+You must also update your Tailscale Access Control List (ACL) to allow funnel access for the healthchecks service. Add the following to your ACL policy at https://login.tailscale.com/admin/acls:
+
+```json
+{
+  "nodeAttrs": [
+    {
+      "target": ["tag:healthchecks"],
+      "attr": ["funnel"]
+    }
+  ]
+}
+```
+
+**3. Restart the services:**
+
+After making these changes, restart the Tailscale container:
+
+```bash
+docker compose restart tailscale
+```
+
+**Important Security Considerations:**
+- ⚠️ **This exposes your Healthchecks instance to the entire internet**
+- Consider disabling user registration: Set `REGISTRATION_OPEN=False` in your `.env` file
+- Use strong passwords and consider enabling two-factor authentication if supported
+- Regularly monitor access logs and update your instance
+- Only enable this if you specifically need public internet access
+
+Your Healthchecks instance will then be accessible at `https://your-tailscale-domain.ts.net` from anywhere on the internet, not just from devices on your Tailscale network.
+
 ## Service Management
 
 ### Check Service Status
