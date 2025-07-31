@@ -1,21 +1,37 @@
 services:
   tailscale:
     image: tailscale/tailscale:v1.84@sha256:f97ea471667bd94023f76e228c5be0b95564cdba2f9501cb084eeef139d8b65e
-    hostname: health
     restart: unless-stopped
+    container_name: tailscale-healthchecks
+    hostname: healthchecks
     environment:
-      - TS_AUTHKEY=${TS_AUTHKEY}?ephemeral=false
-      - TS_HOSTNAME=health
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_ENABLE_HEALTH_CHECK=true              # Enable healthcheck endpoint: "/healthz"
+      - TS_LOCAL_ADDR_PORT=127.0.0.1:41234       # The <addr>:<port> for the healthz endpoint
       - TS_EXTRA_ARGS=--advertise-tags=tag:healthchecks
       - TS_STATE_DIR=/var/lib/tailscale
-      - TS_SERVE_CONFIG=/config/serve-config.json
+      - TS_SERVE_CONFIG=/config/serve.json
+      - TS_DOMAIN_NAME=${TS_DOMAIN_NAME}
     volumes:
-      - ./config:/config:ro
+      - ./config:/config
       - tailscale-data:/var/lib/tailscale
-      - /dev/net/tun:/dev/net/tun
     cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
+      - net_admin # Tailscale requirement
+      - sys_module # Tailscale requirement
+    devices:
+      - /dev/net/tun:/dev/net/tun # Network configuration for Tailscale to work
+    #ports:
+    #  - 0.0.0.0:${SERVICEPORT}:${SERVICEPORT} # Binding port ${SERVICE}PORT to the local network - may be removed if only exposure to your Tailnet is required
+    # If any DNS issues arise, use your preferred DNS provider by uncommenting the config below
+    #dns: 
+    #  - ${DNS_SERVER}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:41234/healthz"] # Check Tailscale has a Tailnet IP and is operational
+      interval: 1m # How often to perform the check
+      timeout: 10s # Time to wait for the check to succeed
+      retries: 3 # Number of retries before marking as unhealthy
+      start_period: 10s # Time to wait before starting health checks
+    restart: always
     networks:
       - tailscale_net
 
