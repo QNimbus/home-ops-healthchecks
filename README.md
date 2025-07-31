@@ -226,6 +226,16 @@ Once everything is set up:
 
 **Note**: The application uses Tailscale Serve to provide HTTPS access. The configuration in `config/serve-config.json` automatically sets up HTTPS termination and proxies requests to the Healthchecks application running on port 8000.
 
+## Screenshots
+
+Here's what your Healthchecks.io instance will look like once it's running:
+
+**Main Dashboard - Projects View:**
+![Healthchecks Projects View](assets/images/hc_01.png)
+
+**Checks Management Interface:**
+![Healthchecks Checks Interface](assets/images/hc_02.png)
+
 ### Optional: Public Internet Access with Tailscale Funnel
 
 By default, this setup only allows access from devices connected to your Tailscale network. If you want to expose your Healthchecks instance to the public internet, you can enable Tailscale Funnel:
